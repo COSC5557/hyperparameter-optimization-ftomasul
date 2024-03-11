@@ -28,6 +28,23 @@ folds <- createFolds(wine$quality.bin, k = num_folds, list = TRUE, returnTrain =
 
 ## RANDOM FOREST ##
 
+# Results of random forest model without any tuning
+rand_for_acc <- numeric(num_folds)
+
+for(i in 1:num_folds) {
+  indices <- folds[[i]]
+  train <- wine[indices, ]
+  test <- wine[-indices, ]
+  model <- randomForest(quality.bin ~.-quality, data = train)
+  preds <- predict(model, newdata = test)
+  len <- length(test$quality.bin)
+  correct <- sum(preds == test$quality.bin)
+  rand_for_acc[i] <- correct / len
+}
+
+rand_for_mean <- mean(rand_for_acc)
+
+
 # Define objective function for random forest algorithm
 rand_for_function <- function(num_trees, num_vars) {
   num_trees <- as.integer(num_trees)
@@ -84,6 +101,22 @@ rand_for_plot <- plot(x = num_trees, y = num_vars, xlim = c(50, 200), ylim = c(1
 
 ## SVM ##
 
+# Results of SVM model without any tuning
+svm_acc <- numeric(num_folds)
+
+for(i in 1:num_folds) {
+  indices <- folds[[i]]
+  train <- wine[indices, ]
+  test <- wine[-indices, ]
+  model <- svm(quality.bin ~.-quality, data = train)
+  preds <- predict(model, newdata = test)
+  len <- length(test$quality.bin)
+  correct <- sum(preds == test$quality.bin)
+  svm_acc[i] <- correct / len
+}
+
+svm_mean <- mean(svm_acc)
+
 # Define objective function for SVM
 svm_function <- function(gam, C) {
   accuracy_list <- numeric(num_folds)
@@ -121,7 +154,7 @@ svm_optimized <- BayesianOptimization(
   verbose = TRUE
 )
 
-# Visualize the results of the random forest optimization process
+# Visualize the results of the svm optimization process
 gam <- svm_optimized$History$gam
 C <- svm_optimized$History$C
 accuracy <- svm_optimized$History$Value
@@ -130,8 +163,18 @@ colors <- colorRampPalette(c("lightblue", "darkblue"))(length(unique(accuracy)))
 
 point_colors <- colors[cut(accuracy, breaks = length(colors), include.lowest = TRUE)]
 
-rand_for_plot <- plot(x = gam, y = C, xlim = c(0.1, 10), ylim = c(0.01, 1),
+svm_plot <- plot(x = gam, y = C, xlim = c(0.1, 10), ylim = c(0.01, 1),
                       pch = 16, col = point_colors,
                       xlab = "Gamma", ylab = "Cost", 
                       main = "SVM Optimization")
+
+## Results ##
+rand_for_base <- rand_for_mean
+rand_for_tuned <- rand_for_optimized$Best_Value
+rand_for_par <- rand_for_optimized$Best_Par
+
+svm_base <- svm_mean
+svm_tuned <- svm_optimized$Best_Value
+svm_par <- svm_optimized$Best_Par
+
 
